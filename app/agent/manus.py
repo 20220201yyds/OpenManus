@@ -8,11 +8,14 @@ from app.config import config
 from app.logger import logger
 from app.prompt.manus import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.tool import Terminate, ToolCollection
+from app.tool.ask_human import AskHuman
 from app.tool.browser_use_tool import BrowserUseTool
 from app.tool.mcp import MCPClients, MCPClientTool
 from app.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
-
+from app.tool.fetch_ev_fmp_tool import FetchEnterpriseValueFMP
+from app.tool.fetch_income_fmp_tool import FetchIncomeStatementFMP
+from app.tool.analyzer_tool import FinancialNarrativeGenerator
 
 class Manus(ToolCallAgent):
     """A versatile general-purpose agent with support for both local and MCP tools."""
@@ -32,7 +35,14 @@ class Manus(ToolCallAgent):
     # Add general-purpose tools to the tool collection
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(
-            PythonExecute(), BrowserUseTool(), StrReplaceEditor(), Terminate()
+            PythonExecute(),
+            #BrowserUseTool(),
+            StrReplaceEditor(),
+            AskHuman(),
+            Terminate(),
+            FetchEnterpriseValueFMP(),
+            FetchIncomeStatementFMP(),
+            FinancialNarrativeGenerator(),
         )
     )
 
@@ -100,8 +110,11 @@ class Manus(ToolCallAgent):
             await self.mcp_clients.connect_sse(server_url, server_id)
             self.connected_servers[server_id or server_url] = server_url
 
-        # Update available tools with new MCP tools
-        self.available_tools.add_tools(*self.mcp_clients.tools)
+        # Update available tools with only the new tools from this server
+        new_tools = [
+            tool for tool in self.mcp_clients.tools if tool.server_id == server_id
+        ]
+        self.available_tools.add_tools(*new_tools)
 
     async def disconnect_mcp_server(self, server_id: str = "") -> None:
         """Disconnect from an MCP server and remove its tools."""
