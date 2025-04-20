@@ -14,7 +14,7 @@ def get_project_root() -> Path:
 
 PROJECT_ROOT = get_project_root()
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
-
+fmp_api_key=""
 
 class LLMSettings(BaseModel):
     model: str = Field(..., description="Model name")
